@@ -53,6 +53,23 @@ async function run() {
       res.send(result);
     })
 
+    app.get('/applications', async(req, res) =>{
+      const email = req.query.email;
+      const query = { applicant : email }
+      const result = await applicationCollection.find(query).toArray();
+
+      // not recomended
+      for(const application of result){
+        const jobId = application.jobId;
+        const jobQuery = {_id : new ObjectId(jobId)};
+        const job = await jobsCollection.findOne(jobQuery);
+        application.company = job.company;
+        application.title = job.title;
+        application.company_logo = job.company_logo;
+      }
+
+      res.send(result);
+    })
 
 
     // Send a ping to confirm a successful connection
