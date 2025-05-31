@@ -12,7 +12,35 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(cookieParser());
 
+// creating a middleware
+const logger = (req, res, next) =>{
+  console.log('inside the logger middleware');
+  next(); // to move to next middleware
+}
+
+
+const verifyToken = (req, res, next) =>{
+  const token = req?.cookies?.token;
+  console.log('cookie in the middleware', token);
+
+  if(!token){
+    return res.status(401).send({message: 'unauthorized access'})
+  }
+
+  // verify token
+  jwt.verify(token, process.env.JWT_ACCESS_SECRET , (err, decoded) => {
+    if(err){
+      return res.status(401).send({message: 'unauthorized access'});
+    }
+    req.decoded = decoded;
+    // next();
+    // console.log(decoded);
+  })
+
+  // next();
+}
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zc7c13h.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -116,8 +144,15 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/applications', async(req, res) =>{
+    app.get('/applications', logger, verifyToken , async(req, res) =>{
       const email = req.query.email;
+
+      console.log('inside application api', req.cookies);
+
+      if(email !== req.decoded.email){
+        return res.status(403).send({message: 'forbidden access'})
+      }
+
       const query = { applicant : email }
       const result = await applicationCollection.find(query).toArray();
 
