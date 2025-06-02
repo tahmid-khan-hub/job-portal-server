@@ -7,10 +7,12 @@ const cookieParser = require('cookie-parser')
 const port = process.env.PORT || 3000;
 require('dotenv').config();
 
-app.use(cors({
+app.use(cors(
+  {
   origin: ['http://localhost:5173'],
   credentials: true
-}));
+  }
+));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -39,8 +41,8 @@ const verifyToken = (req, res, next) =>{
     // console.log(decoded);
   })
 
-  // next();
 }
+
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zc7c13h.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
@@ -78,6 +80,8 @@ async function run() {
 
       res.send({token});
     })
+
+
 
     // jobs api
     app.get('/jobs', async(req, res) =>{
@@ -144,14 +148,14 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/applications', logger, verifyToken , async(req, res) =>{
+    app.get('/applications', logger, verifyToken, async(req, res) =>{
       const email = req.query.email;
 
       console.log('inside application api', req.cookies);
 
-      if(email !== req.decoded.email){
-        return res.status(403).send({message: 'forbidden access'})
-      }
+      // if(email !== req.decoded.email){
+      //   return res.status(403).send({message: 'forbidden access'})
+      // }
 
       const query = { applicant : email }
       const result = await applicationCollection.find(query).toArray();
