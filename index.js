@@ -16,6 +16,16 @@ app.use(cors(
 app.use(express.json());
 app.use(cookieParser());
 
+
+var admin = require("firebase-admin");
+
+var serviceAccount = require("./firebase-admin-key.json");
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+
 // creating a middleware
 const logger = (req, res, next) =>{
   console.log('inside the logger middleware');
@@ -37,9 +47,29 @@ const verifyToken = (req, res, next) =>{
       return res.status(401).send({message: 'unauthorized access'});
     }
     req.decoded = decoded;
-    // next();
+    next();
     // console.log(decoded);
   })
+
+}
+
+
+// verfiy firebase token
+const verifyFirebaseToken = async(req, res, next) =>{
+  const authHeader = req?.headers?.authorization;
+  const token = authHeader.split(' ')[1];
+
+
+  if(!token){
+    return res.status(401).send({message: 'unauthorized access'})
+  }
+
+  // console.log('fb token', token);
+
+  const userInfo = await admin.auth().verifyIdToken(token);
+  console.log('inside the token', userInfo);
+  req.tokenEmail = userInfo.email;
+  next();
 
 }
 
@@ -148,7 +178,7 @@ async function run() {
       res.send(result);
     })
 
-    app.get('/applications', logger, verifyToken, async(req, res) =>{
+    app.get('/applications', logger, verifyFirebaseToken, async(req, res) =>{
       const email = req.query.email;
 
       console.log('inside application api', req.cookies);
@@ -156,6 +186,10 @@ async function run() {
       // if(email !== req.decoded.email){
       //   return res.status(403).send({message: 'forbidden access'})
       // }
+
+      if(req.tokenEmail != email){
+        return res.status(403).send({message: 'forbidden access'})
+      }
 
       const query = { applicant : email }
       const result = await applicationCollection.find(query).toArray();
